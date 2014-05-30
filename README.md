@@ -10,7 +10,7 @@ Dependencies
 
 Building
 -
-Uses CMake to build, to disable the SDL2 event path run CMake with -DNO\_SDL. This version will
+Uses CMake to build, to disable the SDL2 event path run CMake with `-DNO_SDL`. This version will
 take a `std::function` to be called on an event. This isn't currently implemented so I haven't decided
 on what the function signature should be. A different callback can be registered for each directory being
 watched.
