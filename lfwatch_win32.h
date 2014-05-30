@@ -12,13 +12,12 @@ struct WatchData {
 	OVERLAPPED overlapped;
 	HANDLE dir_handle;
 	//Buffer to store file notification info in
-	char info_buf[16 * 1024];
+	std::array<char, 16 * 1024> info_buf;
 	std::string dir_name;
 	bool watch_subtree;
-};
 
-void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped);
-void register_watch(WatchData &watch);
+	WatchData(HANDLE handle, const std::string &dir, bool watch_subtree);
+};
 
 class WatchWin32 {
 	//Active watches { dir_name, watcher info }
