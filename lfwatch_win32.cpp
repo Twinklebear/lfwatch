@@ -80,9 +80,9 @@ void WatchWin32::watch(const std::string &dir, bool watch_subtree){
 		std::cerr << "Error creating handle\n";
 		return;
 	}
-	auto watch = watchers.emplace(std::make_pair(dir,
+	auto it = watchers.emplace(std::make_pair(dir,
 		WatchData{handle, dir, watch_subtree}));
-	register_watch(watch.first->second);
+	register_watch(it.first->second);
 }
 void WatchWin32::remove(const std::string &dir){
 	auto fnd = watchers.find(dir);
