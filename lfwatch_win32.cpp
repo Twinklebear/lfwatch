@@ -10,14 +10,26 @@
 namespace lfw {
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped);
 
+//Use GetLastError to get an error string
+std::string get_error_msg(){
+	DWORD err = GetLastError();
+	LPSTR err_msg;
+	size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+		| FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPSTR)&err_msg, 0, nullptr);
+	std::string msg{err_msg, size};
+	LocalFree(err_msg);
+	return msg;
+}
 void register_watch(WatchData &watch){
 	std::memset(&watch.info_buf[0], 0, watch.info_buf.size());
 	bool status = ReadDirectoryChangesW(watch.dir_handle, &watch.info_buf[0],
 		watch.info_buf.size(), watch.watch_subtree,
-		FILE_NOTIFY_CHANGE_LAST_WRITE, NULL,
+		FILE_NOTIFY_CHANGE_LAST_WRITE, nullptr,
 		&watch.overlapped, watch_callback);
 	if (!status){
-		std::cout << "Error registering watch\n";
+		std::cerr << "Error registering watch on " << watch.dir_name
+			<< ": " << get_error_msg() << "\n";
 	}
 }
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
@@ -68,15 +80,14 @@ WatchWin32::~WatchWin32(){
 }
 void WatchWin32::watch(const std::string &dir, bool watch_subtree){
 	if (watchers.find(dir) != watchers.end()){
-		std::cout << "already watching " << dir << "\n";
 		return;
 	}
 	HANDLE handle = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY,
 		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-		NULL);
+		nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+		nullptr);
 	if (handle == INVALID_HANDLE_VALUE){
-		std::cerr << "Error creating handle\n";
+		std::cerr << "Error creating handle for " << dir << ": " << get_error_msg() << "\n";
 		return;
 	}
 	auto it = watchers.emplace(std::make_pair(dir,
@@ -91,7 +102,7 @@ void WatchWin32::remove(const std::string &dir){
 	}
 }
 void WatchWin32::update(){
-	MsgWaitForMultipleObjectsEx(0, NULL, 0, QS_ALLINPUT, MWMO_ALERTABLE);
+	MsgWaitForMultipleObjectsEx(0, nullptr, 0, QS_ALLINPUT, MWMO_ALERTABLE);
 }
 }
 
