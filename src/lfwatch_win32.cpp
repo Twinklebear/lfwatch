@@ -71,6 +71,7 @@ WatchData::WatchData(HANDLE handle, const std::string &dir, bool watch_subtree, 
 	std::memset(&overlapped, 0, sizeof(overlapped));
 }
 
+WatchWin32::WatchWin32(){}
 WatchWin32::~WatchWin32(){
 	for (auto &pair : watchers){
 		cancel(pair.second);
