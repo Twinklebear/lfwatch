@@ -37,9 +37,8 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 	do {
 		PFILE_NOTIFY_INFORMATION info =
 			reinterpret_cast<PFILE_NOTIFY_INFORMATION>(&watch->info_buf[0] + offset);
-		char fname[MAX_PATH] = { 0 };
+		char fname[MAX_PATH + 1] = { 0 };
 		std::wcstombs(fname, info->FileName, info->FileNameLength);
-		fname[info->FileNameLength + 1] = '\0';
 		std::cout << "File: " << fname << "\n";
 		offset = info->NextEntryOffset;
 	}
