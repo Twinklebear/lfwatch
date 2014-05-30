@@ -10,7 +10,7 @@
 namespace lfw {
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped);
 
-//Use GetLastError to get an error string
+//Log out the error message for an error code
 std::string get_error_msg(DWORD err){
 	LPSTR err_msg;
 	size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
@@ -77,7 +77,14 @@ WatchWin32::~WatchWin32(){
 	}
 }
 void WatchWin32::watch(const std::string &dir, bool watch_subtree, unsigned filters){
-	if (watchers.find(dir) != watchers.end()){
+	auto fnd = watchers.find(dir);
+	if (fnd != watchers.end()){
+		//If we're updating an existing watch with new filters or subtree status
+		if (fnd->second.filter != filters || fnd->second.watch_subtree != watch_subtree){
+			fnd->second.filter = filters;
+			fnd->second.watch_subtree = watch_subtree;
+			register_watch(fnd->second);
+		}
 		return;
 	}
 	HANDLE handle = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY,
