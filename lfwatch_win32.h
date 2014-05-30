@@ -32,13 +32,10 @@ public:
 	 * watch_subtree should be true if we want to watch
 	 * all subdirectories as well
 	 */
-	void watch_dir(const std::string &dir, bool watch_subtree);
-	void remove_watch(const std::string &dir);
+	void watch(const std::string &dir, bool watch_subtree);
+	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();
-
-private:
-	void cancel(WatchData &watch);
 };
 }
 

@@ -47,6 +47,11 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 	//Re-register to listen again
 	register_watch(*watch);
 }
+void cancel(WatchData &watch){
+	CancelIo(watch.dir_handle);
+	//Wait for all activity to finish here?
+	CloseHandle(watch.dir_handle);
+}
 
 WatchData::WatchData(HANDLE handle, const std::string &dir, bool watch_subtree)
 	: dir_handle(handle), dir_name(dir), watch_subtree(watch_subtree)
@@ -59,12 +64,11 @@ WatchWin32::~WatchWin32(){
 		cancel(pair.second);
 	}
 }
-void WatchWin32::watch_dir(const std::string &dir, bool watch_subtree){
+void WatchWin32::watch(const std::string &dir, bool watch_subtree){
 	if (watchers.find(dir) != watchers.end()){
 		std::cout << "already watching " << dir << "\n";
 		return;
 	}
-	std::cout << "adding watch for " << dir << "\n";
 	HANDLE handle = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY,
 		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
 		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
@@ -77,7 +81,7 @@ void WatchWin32::watch_dir(const std::string &dir, bool watch_subtree){
 		WatchData{handle, dir, watch_subtree}));
 	register_watch(watch.first->second);
 }
-void WatchWin32::remove_watch(const std::string &dir){
+void WatchWin32::remove(const std::string &dir){
 	auto fnd = watchers.find(dir);
 	if (fnd != watchers.end()){
 		cancel(fnd->second);
@@ -87,12 +91,6 @@ void WatchWin32::remove_watch(const std::string &dir){
 void WatchWin32::update(){
 	MsgWaitForMultipleObjectsEx(0, NULL, 0, QS_ALLINPUT, MWMO_ALERTABLE);
 }
-void WatchWin32::cancel(WatchData &watch){
-	CancelIo(watch.dir_handle);
-	//Wait for all activity to finish here?
-	CloseHandle(watch.dir_handle);
-}
-
 }
 
 #endif
