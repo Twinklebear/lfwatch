@@ -11,8 +11,7 @@ namespace lfw {
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped);
 
 //Use GetLastError to get an error string
-std::string get_error_msg(){
-	DWORD err = GetLastError();
+std::string get_error_msg(DWORD err){
 	LPSTR err_msg;
 	size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
 		| FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
@@ -29,7 +28,7 @@ void register_watch(WatchData &watch){
 		&watch.overlapped, watch_callback);
 	if (!status){
 		std::cerr << "Error registering watch on " << watch.dir_name
-			<< ": " << get_error_msg() << "\n";
+			<< ": " << get_error_msg(GetLastError()) << "\n";
 	}
 }
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
@@ -42,7 +41,7 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 			std::cout << "aborted\n";
 			return;
 		default:
-			std::cout << "error\n";
+			std::cerr << "Watch error: " << get_error_msg(err) << "\n";
 			return;
 	}
 	size_t offset = 0;
@@ -87,7 +86,8 @@ void WatchWin32::watch(const std::string &dir, bool watch_subtree){
 		nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
 		nullptr);
 	if (handle == INVALID_HANDLE_VALUE){
-		std::cerr << "Error creating handle for " << dir << ": " << get_error_msg() << "\n";
+		std::cerr << "Error creating handle for " << dir
+			<< ": " << get_error_msg(GetLastError()) << "\n";
 		return;
 	}
 	auto it = watchers.emplace(std::make_pair(dir,
