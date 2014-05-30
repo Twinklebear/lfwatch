@@ -49,7 +49,10 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 }
 void cancel(WatchData &watch){
 	CancelIo(watch.dir_handle);
-	//Wait for all activity to finish here?
+	//How can we determine what/how long to wait for any running stuff to finish?
+	if (!HasOverlappedIoCompleted(&watch.overlapped)){
+		SleepEx(5, true);
+	}
 	CloseHandle(watch.dir_handle);
 }
 

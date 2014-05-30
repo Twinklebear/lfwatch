@@ -17,7 +17,7 @@ int main(int argc, char **argv){
 	watcher.watch(argv[2], false);
 	for (int i = 0; i < 5; ++i){
 		std::cout << "Sleeping\n";
-		SleepEx(6000, true);
+		SleepEx(2000, true);
 		std::cout << "Updating\n";
 		watcher.update();
 		if (i == 2){
