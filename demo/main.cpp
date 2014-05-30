@@ -13,8 +13,8 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	lfw::WatchWin32 watcher;
-	watcher.watch(argv[1], false);
-	watcher.watch(argv[2], false);
+	watcher.watch(argv[1], true, lfw::Notify::CHANGE_LAST_WRITE);
+	watcher.watch(argv[2], false, lfw::Notify::CHANGE_SIZE);
 	for (int i = 0; i < 5; ++i){
 		std::cout << "Sleeping\n";
 		SleepEx(4000, true);
