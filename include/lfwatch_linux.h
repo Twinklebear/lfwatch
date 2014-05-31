@@ -12,12 +12,9 @@ namespace lfw {
 enum Notify {
 	//Should we listen for this event type? there's some differences
 	//in windows/linux rename event handling need to test
-	CHANGE_FILE_NAME = IN_MOVED_TO,
+	CHANGE_FILE_NAME = IN_MOVE,
 	CHANGE_DIR_NAME = IN_MOVE_SELF,
 	CHANGE_ATTRIBUTES = IN_ATTRIB,
-	//Do we really care about size and last write change?
-	//one kind of implies the other if the file changed at all
-	CHANGE_SIZE = IN_MODIFY,
 	CHANGE_LAST_WRITE = IN_CLOSE_WRITE,
 	CHANGE_LAST_ACCESS = IN_ACCESS,
 	CHANGE_CREATION = IN_ATTRIB,
@@ -37,12 +34,10 @@ public:
 	~WatchLinux();
 	/**
 	 * Start watching some directory for file changes
-	 * watch_subtree should be true if we want to watch
-	 * all subdirectories as well. Filters is a set of
-	 * the notify flags or'd together to watch for
-	 * TODO: watch_subtree ignored on linux, should remove
+	 * Filters is a set of the notify flags or'd
+	 * together to watch for
 	 */
-	void watch(const std::string &dir, bool watch_subtree, unsigned filters);
+	void watch(const std::string &dir, unsigned filters);
 	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();

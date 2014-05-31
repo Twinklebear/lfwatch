@@ -21,7 +21,7 @@ WatchLinux::WatchLinux() : notify_fd(inotify_init1(IN_NONBLOCK)){
 WatchLinux::~WatchLinux(){
 	close(notify_fd);
 }
-void WatchLinux::watch(const std::string &dir, bool watch_subtree, unsigned filters){
+void WatchLinux::watch(const std::string &dir, unsigned filters){
 	int wd = inotify_add_watch(notify_fd, dir.c_str(), filters);
 	if (wd == -1){
 		std::string msg = "Failed to watch " + dir;

@@ -23,7 +23,7 @@ std::string get_error_msg(DWORD err){
 void register_watch(WatchData &watch){
 	std::memset(&watch.info_buf[0], 0, watch.info_buf.size());
 	bool status = ReadDirectoryChangesW(watch.dir_handle, &watch.info_buf[0],
-		watch.info_buf.size(), watch.watch_subtree, watch.filter, nullptr,
+		watch.info_buf.size(), false, watch.filter, nullptr,
 		&watch.overlapped, watch_callback);
 	if (!status){
 		std::cerr << "Error registering watch on " << watch.dir_name
@@ -65,8 +65,8 @@ void cancel(WatchData &watch){
 	CloseHandle(watch.dir_handle);
 }
 
-WatchData::WatchData(HANDLE handle, const std::string &dir, bool watch_subtree, DWORD filter)
-	: dir_handle(handle), dir_name(dir), watch_subtree(watch_subtree), filter(filter)
+WatchData::WatchData(HANDLE handle, const std::string &dir, DWORD filter)
+	: dir_handle(handle), dir_name(dir), filter(filter)
 {
 	std::memset(&overlapped, 0, sizeof(overlapped));
 }
@@ -77,13 +77,12 @@ WatchWin32::~WatchWin32(){
 		cancel(pair.second);
 	}
 }
-void WatchWin32::watch(const std::string &dir, bool watch_subtree, unsigned filters){
+void WatchWin32::watch(const std::string &dir, unsigned filters){
 	auto fnd = watchers.find(dir);
 	if (fnd != watchers.end()){
 		//If we're updating an existing watch with new filters or subtree status
-		if (fnd->second.filter != filters || fnd->second.watch_subtree != watch_subtree){
+		if (fnd->second.filter != filters){
 			fnd->second.filter = filters;
-			fnd->second.watch_subtree = watch_subtree;
 			register_watch(fnd->second);
 		}
 		return;
@@ -98,7 +97,7 @@ void WatchWin32::watch(const std::string &dir, bool watch_subtree, unsigned filt
 		return;
 	}
 	auto it = watchers.emplace(std::make_pair(dir,
-		WatchData{handle, dir, watch_subtree, filters}));
+		WatchData{handle, dir, filters}));
 	register_watch(it.first->second);
 }
 void WatchWin32::remove(const std::string &dir){
