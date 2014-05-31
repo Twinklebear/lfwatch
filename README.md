@@ -1,6 +1,6 @@
 lfwatch - A LightFileWatcher
 =
-A very lightweight file watcher for Windows, Linux (coming soon) and OS X (coming soon). Monitors a
+A very lightweight file watcher for Windows (in progress), Linux (in progress) and OS X (coming soon). Monitors a
 directory for file changes and pushes an SDL user event containing information about the change or if
 compiled without SDL2 support can call a custom user function for each directory being watched.
 
