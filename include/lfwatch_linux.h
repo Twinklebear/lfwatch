@@ -5,6 +5,7 @@
 
 #include <string>
 #include <map>
+#include <functional>
 #include <sys/inotify.h>
 
 namespace lfw {
@@ -17,8 +18,17 @@ enum Notify {
 	CHANGE_ATTRIBUTES = IN_ATTRIB,
 	CHANGE_LAST_WRITE = IN_CLOSE_WRITE,
 	CHANGE_LAST_ACCESS = IN_ACCESS,
-	CHANGE_CREATION = IN_ATTRIB,
-	CHANGE_SECURITY = IN_ATTRIB
+};
+
+typedef std::function<void(const std::string&, const std::string&, unsigned)>
+	Callback;
+
+struct WatchData {
+	Callback callback;
+	int watch_descriptor;
+	std::string dir_name;
+
+	WatchData(const Callback &callback, int wd, const std::string dir);
 };
 
 class WatchLinux {
@@ -26,7 +36,7 @@ class WatchLinux {
 	//Assuming that people will get more updates than they'll
 	//call remove, using this map layout will give fast dir name
 	//lookups by id but slow name lookups to remove watches
-	std::map<int, std::string> watchers;
+	std::map<int, WatchData> watchers;
 	int notify_fd;
 
 public:
@@ -37,7 +47,7 @@ public:
 	 * Filters is a set of the notify flags or'd
 	 * together to watch for
 	 */
-	void watch(const std::string &dir, unsigned filters);
+	void watch(const std::string &dir, unsigned filters, const Callback &callback);
 	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();

@@ -13,8 +13,9 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 //Log out the error message for an error code
 std::string get_error_msg(DWORD err){
 	LPSTR err_msg;
-	size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
-		| FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+	size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
+		| FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPSTR)&err_msg, 0, nullptr);
 	std::string msg{err_msg, size};
 	LocalFree(err_msg);
@@ -49,7 +50,11 @@ void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped
 			reinterpret_cast<PFILE_NOTIFY_INFORMATION>(&watch->info_buf[0] + offset);
 		char fname[MAX_PATH + 1] = { 0 };
 		std::wcstombs(fname, info->FileName, info->FileNameLength);
-		std::cout << "File: " << fname << "\n";
+		//TODO: The NOTIFY_INFORMATION Action member is different from
+		//the listener mask we can set! And has fewer values!
+		//Maybe I'll only listen for write, add, delete, and moving of
+		//files
+		watch->callback(watch->dir_name, fname, watch->filter);
 		offset = info->NextEntryOffset;
 	}
 	while (offset != 0);
@@ -65,8 +70,9 @@ void cancel(WatchData &watch){
 	CloseHandle(watch.dir_handle);
 }
 
-WatchData::WatchData(HANDLE handle, const std::string &dir, DWORD filter)
-	: dir_handle(handle), dir_name(dir), filter(filter)
+WatchData::WatchData(const Callback &callback, HANDLE handle,
+	const std::string &dir, DWORD filter)
+	: dir_handle(handle), dir_name(dir), filter(filter), callback(callback)
 {
 	std::memset(&overlapped, 0, sizeof(overlapped));
 }
@@ -77,7 +83,9 @@ WatchWin32::~WatchWin32(){
 		cancel(pair.second);
 	}
 }
-void WatchWin32::watch(const std::string &dir, unsigned filters){
+void WatchWin32::watch(const std::string &dir, unsigned filters,
+	const Callback &callback)
+{
 	auto fnd = watchers.find(dir);
 	if (fnd != watchers.end()){
 		//If we're updating an existing watch with new filters or subtree status
@@ -97,7 +105,7 @@ void WatchWin32::watch(const std::string &dir, unsigned filters){
 		return;
 	}
 	auto it = watchers.emplace(std::make_pair(dir,
-		WatchData{handle, dir, filters}));
+		WatchData{callback, handle, dir, filters}));
 	register_watch(it.first->second);
 }
 void WatchWin32::remove(const std::string &dir){
