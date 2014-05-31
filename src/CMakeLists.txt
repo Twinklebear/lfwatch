@@ -1,3 +1,9 @@
 add_library(lfwatch lfwatch_win32.cpp lfwatch_linux.cpp events.cpp)
-install(TARGETS lfwatch DESTINATION "${LFWATCH_SOURCE_DIR}/bin")
+install(FILES "${LFWATCH_SOURCE_DIR}/include/lfwatch.h"
+	"${LFWATCH_SOURCE_DIR}/include/lfwatch_win32.h" "${LFWATCH_SOURCE_DIR}/include/lfwatch_linux.h"
+	"${LFWATCH_SOURCE_DIR}/include/events.h"
+	DESTINATION include)
+install(TARGETS lfwatch
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib)
 
