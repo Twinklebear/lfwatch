@@ -18,9 +18,6 @@
 #include "lfwatch_linux.h"
 
 namespace lfw {
-EventData::EventData(const std::string &dir, const std::string &fname, uint32_t filter)
-	: dir(dir), fname(fname), filter(filter)
-{}
 
 #ifdef NO_SDL
 WatchData::WatchData(int wd, const std::string &dir, uint32_t filter,
@@ -106,14 +103,15 @@ void WatchLinux::update(){
 			auto it = watchers.find(event->wd);
 			if (it != watchers.end()){
 #ifdef NO_SDL
-				it->second.callback(it->second.dir_name, event->name, event->mask);
+				it->second.callback(EventData{it->second.dir_name, event->name,
+					it->second.filter, event->mask});
 #else
 				SDL_Event sdl_evt;
 				SDL_zero(sdl_evt);
 				sdl_evt.type = event_code;
 				sdl_evt.user.code = event->mask;
 				sdl_evt.user.data1 = new EventData(it->second.dir_name,
-					event->name, it->second.filter);
+					event->name, it->second.filter, event->mask);
 				sdl_evt.user.data2 = nullptr;
 				SDL_PushEvent(&sdl_evt);
 #endif

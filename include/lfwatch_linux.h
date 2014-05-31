@@ -7,6 +7,7 @@
 #include <map>
 #include <functional>
 #include <sys/inotify.h>
+#include "events.h"
 
 namespace lfw {
 //Possible events we can notify about
@@ -18,17 +19,6 @@ enum Notify {
 	CHANGE_ATTRIBUTES = IN_ATTRIB,
 	CHANGE_LAST_WRITE = IN_CLOSE_WRITE,
 	CHANGE_LAST_ACCESS = IN_ACCESS,
-};
-
-typedef std::function<void(const std::string&, const std::string&, unsigned)>
-	Callback;
-
-//Struct returned with SDL events in the user.data1 member
-struct EventData {
-	std::string dir, fname;
-	int filter;
-
-	EventData(const std::string &dir, const std::string &fname, uint32_t filter);
 };
 
 struct WatchData {

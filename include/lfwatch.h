@@ -1,4 +1,5 @@
 #include <ostream>
+#include "events.h"
 #include "lfwatch_linux.h"
 #include "lfwatch_win32.h"
 

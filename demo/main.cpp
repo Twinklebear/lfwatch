@@ -29,15 +29,15 @@ int main(int argc, char **argv){
 	}
 	lfw::Watcher watcher;
 	watcher.watch(argv[1], lfw::Notify::CHANGE_LAST_WRITE,
-		[](const std::string &dir, const std::string &fname, unsigned mask){
-			std::cout << notify_string(mask) << " event in " << dir
-				<< " on file " << fname << "\n";
+		[](lfw::EventData e){
+			std::cout << notify_string(e.event) << " event in "
+				<< e.dir << " on file " << e.fname << "\n";
 		});
 
 	watcher.watch(argv[2], lfw::Notify::CHANGE_FILE_NAME,
-		[](const std::string &dir, const std::string &fname, unsigned mask){
-			std::cout << notify_string(mask) << " event in " << dir
-				<< " on file " << fname << "\n";
+		[](lfw::EventData e){
+			std::cout << notify_string(e.event) << " event in "
+				<< e.dir << " on file " << e.fname << "\n";
 		});
 
 	for (int i = 0; i < 5; ++i){

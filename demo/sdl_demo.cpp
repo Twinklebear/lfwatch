@@ -39,7 +39,8 @@ int main(int argc, char **argv){
 		while (SDL_PollEvent(&e)){
 			if (e.type == lfw::Watcher::event()){
 				lfw::EventData *data = static_cast<lfw::EventData*>(e.user.data1);
-				std::cout << "Got event in " << data->dir
+				std::cout << notify_string(data->event)
+					<< " event in " << data->dir
 					<< " on file: " << data->fname << "\n";
 				delete data;
 			}
