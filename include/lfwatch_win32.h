@@ -1,4 +1,5 @@
 #ifdef _WIN32
+
 #ifndef LFWATCH_WIN32
 #define LFWATCH_WIN32
 
@@ -22,7 +23,7 @@ struct WatchData {
 	OVERLAPPED overlapped;
 	HANDLE dir_handle;
 	//Buffer to store file notification info in
-	std::array<char, 16 * 1024> info_buf;
+	std::array<char, 4 * 1024> info_buf;
 	std::string dir_name;
 	bool watch_subtree;
 	DWORD filter;
