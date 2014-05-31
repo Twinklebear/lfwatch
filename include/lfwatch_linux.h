@@ -23,12 +23,27 @@ enum Notify {
 typedef std::function<void(const std::string&, const std::string&, unsigned)>
 	Callback;
 
+//Struct returned with SDL events in the user.data1 member
+struct EventData {
+	std::string dir, fname;
+	int filter;
+
+	EventData(const std::string &dir, const std::string &fname, uint32_t filter);
+};
+
 struct WatchData {
-	Callback callback;
 	int watch_descriptor;
 	std::string dir_name;
+	uint32_t filter;
+#ifdef NO_SDL
+	Callback callback;
+#endif
 
-	WatchData(const Callback &callback, int wd, const std::string dir);
+#ifdef NO_SDL
+	WatchData(int wd, const std::string &dir, uint32_t filter, const Callback &cb);
+#else
+	WatchData(int wd, const std::string &dir, uint32_t filter);
+#endif
 };
 
 class WatchLinux {
@@ -39,6 +54,11 @@ class WatchLinux {
 	std::map<int, WatchData> watchers;
 	int notify_fd;
 
+#ifndef NO_SDL
+	//The SDL User event code for file events
+	static uint32_t event_code;
+#endif
+
 public:
 	WatchLinux();
 	~WatchLinux();
@@ -47,10 +67,18 @@ public:
 	 * Filters is a set of the notify flags or'd
 	 * together to watch for
 	 */
-	void watch(const std::string &dir, unsigned filters, const Callback &callback);
+#ifdef NO_SDL
+	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
+#else
+	void watch(const std::string &dir, uint32_t filters);
+#endif
 	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();
+#ifndef NO_SDL
+	//Get the SDL user event code for events emitted by the watchers
+	static uint32_t event();
+#endif
 
 private:
 	WatchLinux(const WatchLinux &w){

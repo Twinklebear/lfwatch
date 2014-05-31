@@ -10,24 +10,61 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
+
+#ifndef NO_SDL
+#include <SDL.h>
+#endif
+
 #include "lfwatch_linux.h"
 
 namespace lfw {
-WatchData::WatchData(const Callback &callback, int wd, const std::string dir)
-	: callback(callback), watch_descriptor(wd), dir_name(dir)
+EventData::EventData(const std::string &dir, const std::string &fname, uint32_t filter)
+	: dir(dir), fname(fname), filter(filter)
 {}
+
+#ifdef NO_SDL
+WatchData::WatchData(int wd, const std::string &dir, uint32_t filter,
+	const Callback &cb)
+	: watch_descriptor(wd), dir_name(dir), filter(filter), callback(cb)
+{}
+#else
+WatchData::WatchData(int wd, const std::string &dir, uint32_t filter)
+	: watch_descriptor(wd), dir_name(dir), filter(filter)
+{}
+#endif
+
+#ifndef NO_SDL
+//SDL uses (Uint32)-1 for invalid event code
+unsigned WatchLinux::event_code = -1;
+#endif
 
 WatchLinux::WatchLinux() : notify_fd(inotify_init1(IN_NONBLOCK)){
 	if (notify_fd == -1){
 		perror("Failed to initialize inotify");
 		assert(false);
 	}
+#ifndef NO_SDL
+	//Check if we've initialized the SDL event code, invalid ids are
+	//(Uint32)-1
+	if (event_code == static_cast<uint32_t>(-1)){
+		event_code = SDL_RegisterEvents(1);
+		if (event_code == static_cast<uint32_t>(-1)){
+			std::cerr << "Failed to get event code from SDL: "
+				<< SDL_GetError() << std::endl;
+			assert(false);
+		}
+	}
+#endif
 }
 WatchLinux::~WatchLinux(){
 	close(notify_fd);
 }
-void WatchLinux::watch(const std::string &dir, unsigned filters,
+#ifdef NO_SDL
+void WatchLinux::watch(const std::string &dir, uint32_t filters,
 	const Callback &callback)
+#else
+void WatchLinux::watch(const std::string &dir, uint32_t filters)
+#endif
 {
 	int wd = inotify_add_watch(notify_fd, dir.c_str(), filters);
 	if (wd == -1){
@@ -35,7 +72,11 @@ void WatchLinux::watch(const std::string &dir, unsigned filters,
 		perror(msg.c_str());
 		return;
 	}
-	watchers.emplace(std::make_pair(wd, WatchData{callback, wd, dir}));
+#ifdef NO_SDL
+	watchers.emplace(std::make_pair(wd, WatchData{wd, dir, filters, callback}));
+#else
+	watchers.emplace(std::make_pair(wd, WatchData{wd, dir, filters}));
+#endif
 }
 void WatchLinux::remove(const std::string &dir){
 	auto it = std::find_if(watchers.begin(), watchers.end(),
@@ -64,11 +105,27 @@ void WatchLinux::update(){
 			//we got this event and now
 			auto it = watchers.find(event->wd);
 			if (it != watchers.end()){
+#ifdef NO_SDL
 				it->second.callback(it->second.dir_name, event->name, event->mask);
+#else
+				SDL_Event sdl_evt;
+				SDL_zero(sdl_evt);
+				sdl_evt.type = event_code;
+				sdl_evt.user.code = event->mask;
+				sdl_evt.user.data1 = new EventData(it->second.dir_name,
+					event->name, it->second.filter);
+				sdl_evt.user.data2 = nullptr;
+				SDL_PushEvent(&sdl_evt);
+#endif
 			}
 		}
 	}
 }
+#ifndef NO_SDL
+unsigned WatchLinux::event(){
+	return event_code;
+}
+#endif
 }
 
 #endif
