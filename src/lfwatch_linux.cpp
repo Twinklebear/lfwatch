@@ -32,7 +32,7 @@ WatchData::WatchData(int wd, const std::string &dir, uint32_t filter)
 
 #ifndef NO_SDL
 //SDL uses (Uint32)-1 for invalid event code
-unsigned WatchLinux::event_code = -1;
+uint32_t WatchLinux::event_code = -1;
 #endif
 
 WatchLinux::WatchLinux() : notify_fd(inotify_init1(IN_NONBLOCK)){
