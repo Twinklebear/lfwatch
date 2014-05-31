@@ -52,7 +52,9 @@ void WatchLinux::update(){
 				evt += sizeof(struct inotify_event) + event->len)
 		{
 			event = reinterpret_cast<struct inotify_event*>(evt);
-			std::cout << "Got event on file " << event->name << "\n";
+			std::cout << "Got event in dir "
+				<< watchers[event->wd]
+				<< " on file " << event->name << "\n";
 		}
 	}
 	else {
