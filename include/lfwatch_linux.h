@@ -78,6 +78,8 @@ private:
 		//TODO Rule of 3
 		return *this;
 	}
+	//Run through all inotify events in the buffer and emit them
+	void emit_events(const char *buf, int len);
 };
 }
 

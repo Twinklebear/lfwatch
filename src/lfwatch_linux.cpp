@@ -86,44 +86,50 @@ void WatchLinux::remove(const std::string &dir){
 	}
 }
 void WatchLinux::update(){
-	char buf[4 * 1024];
-	//Should we use a bigger buffer like the example?
-	int len = read(notify_fd, buf, sizeof(buf));
-	if (len == -1 && errno != EAGAIN){
-		perror("Error reading");
-	}
-	else if (len > 0){
-		struct inotify_event *event;
-		for (char *evt = buf; evt < buf + len;
-				evt += sizeof(struct inotify_event) + event->len)
-		{
-			event = reinterpret_cast<struct inotify_event*>(evt);
-			//Check that the listener hasn't been removed between when
-			//we got this event and now
-			auto it = watchers.find(event->wd);
-			if (it != watchers.end()){
-#ifdef NO_SDL
-				it->second.callback(EventData{it->second.dir_name, event->name,
-					it->second.filter, event->mask});
-#else
-				SDL_Event sdl_evt;
-				SDL_zero(sdl_evt);
-				sdl_evt.type = event_code;
-				sdl_evt.user.code = event->mask;
-				sdl_evt.user.data1 = new EventData(it->second.dir_name,
-					event->name, it->second.filter, event->mask);
-				sdl_evt.user.data2 = nullptr;
-				SDL_PushEvent(&sdl_evt);
-#endif
-			}
+	int len;
+	do {
+		char buf[4 * 1024] = { 0 };
+		len = read(notify_fd, buf, sizeof(buf));
+		if (len == -1 && errno != EAGAIN){
+			perror("Error reading");
+		}
+		else if (len > 0){
+			emit_events(buf, len);
 		}
 	}
+	while (len > 0);
 }
 #ifndef NO_SDL
-unsigned WatchLinux::event(){
+uint32_t WatchLinux::event(){
 	return event_code;
 }
 #endif
+void WatchLinux::emit_events(const char *buf, int len){
+	const struct inotify_event *event;
+	for (const char *evt = buf; evt < buf + len;
+		evt += sizeof(struct inotify_event) + event->len)
+	{
+		event = reinterpret_cast<const struct inotify_event*>(evt);
+		//Check that the listener hasn't been removed between when
+		//we got this event and now
+		auto it = watchers.find(event->wd);
+		if (it != watchers.end()){
+#ifdef NO_SDL
+			it->second.callback(EventData{it->second.dir_name, event->name,
+					it->second.filter, event->mask});
+#else
+			SDL_Event sdl_evt;
+			SDL_zero(sdl_evt);
+			sdl_evt.type = event_code;
+			sdl_evt.user.code = event->mask;
+			sdl_evt.user.data1 = new EventData(it->second.dir_name,
+					event->name, it->second.filter, event->mask);
+			sdl_evt.user.data2 = nullptr;
+			SDL_PushEvent(&sdl_evt);
+#endif
+		}
+	}
+}
 }
 
 #endif
