@@ -27,9 +27,7 @@ struct WatchData {
 	uint32_t filter;
 #ifdef NO_SDL
 	Callback callback;
-#endif
 
-#ifdef NO_SDL
 	WatchData(int wd, const std::string &dir, uint32_t filter, const Callback &cb);
 #else
 	WatchData(int wd, const std::string &dir, uint32_t filter);

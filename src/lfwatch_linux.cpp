@@ -122,8 +122,8 @@ void WatchLinux::emit_events(const char *buf, int len){
 			SDL_zero(sdl_evt);
 			sdl_evt.type = event_code;
 			sdl_evt.user.code = event->mask;
-			sdl_evt.user.data1 = new EventData(it->second.dir_name,
-					event->name, it->second.filter, event->mask);
+			sdl_evt.user.data1 = new EventData{it->second.dir_name,
+					event->name, it->second.filter, event->mask};
 			sdl_evt.user.data2 = nullptr;
 			SDL_PushEvent(&sdl_evt);
 #endif
