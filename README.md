@@ -18,8 +18,8 @@ watched.
 Examples
 -
 The library is very simple, create an `lfw::Watcher` and then select the directories and changes you
-want to watch for with the `watch` method. The SDL User event or registered callbacks are passed an
-`lfw::EventData` struct containing information about the event.
+want to watch for with the `watch` method and call `update` to let the watcher get information about any changes.
+The SDL User event or registered callbacks are passed an `lfw::EventData` struct containing information about the event.
 
 ```c++
 struct EventData {
@@ -39,6 +39,7 @@ could handle it normally in our event loop it would look like this.
 //Initialize SDL before creating the watcher
 lfw::Watcher watcher;
 //Watch for file writes in 'some_directory'
+//Note: you can OR multiple filters together to watch for multiple events
 watcher.watch("some_directory", lfw::Notify::CHANGE_LAST_WRITE);
 
 //In your update loop notify the watcher to update itself
@@ -51,7 +52,7 @@ while (SDL_PollEvent(&e)){
 		//Retrieve the information about the event from the SDL user event
 		lfw::EventData *data = static_cast<lfw::EventData*>(e.user.data1);
 		std::cout << "File " << data->fname << " was written to\n";
-		//Must delete it since it's passed on the heap
+		//We need to delete it since it's passed on the heap
 		delete data;
 	}
 }
@@ -62,6 +63,7 @@ If instead we wanted to use our own callbacks to get the event information it'd 
 ```c++
 lfw::Watcher watcher;
 //Watch for file writes in 'some_directory' and call our lambda when one happens
+//Note: you can OR multiple filters together to watch for multiple events
 watcher.watch("some_directory", lfw::Notify::CHANGE_LAST_WRITE
 	[](lfw::EventData e){
 		std::cout << "File " << e.fname << " was written to\n";
