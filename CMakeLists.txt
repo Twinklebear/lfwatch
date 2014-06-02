@@ -23,5 +23,8 @@ endif()
 
 include_directories(include)
 add_subdirectory(src)
-add_subdirectory(demo)
+# Only build the demos if we want to see them
+if (DEFINED BUILD_DEMO)
+	add_subdirectory(demo)
+endif()
 

@@ -5,22 +5,23 @@
 std::string notify_string(unsigned mask){
 	std::string msg;
 	if (mask & lfw::Notify::CHANGE_FILE_NAME){
-		msg += "CHANGE_FILE_NAME";
+		msg += "CHANGE_FILE_NAME ";
 	}
 	if (mask & lfw::Notify::CHANGE_DIR_NAME){
-		msg += "CHANGE_DIR_NAME";
+		msg += "CHANGE_DIR_NAME ";
 	}
 	if (mask & lfw::Notify::CHANGE_ATTRIBUTES){
-		msg += "CHANGE_ATTRIBUTES";
+		msg += "CHANGE_ATTRIBUTES ";
 	}
 	if (mask & lfw::Notify::CHANGE_LAST_WRITE){
-		msg += "CHANGE_LAST_WRITE";
+		msg += "CHANGE_LAST_WRITE ";
 	}
 	if (mask & lfw::Notify::CHANGE_LAST_ACCESS){
-		msg += "CHANGE_LAST_ACCESS";
+		msg += "CHANGE_LAST_ACCESS ";
 	}
 	return msg;
 }
+
 int main(int argc, char **argv){
 	if (argc < 3){
 		std::cout << "Usage ./exe <dir1> <dir2>\n";
