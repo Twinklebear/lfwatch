@@ -7,6 +7,7 @@
 #include <array>
 #include <map>
 #include <windows.h>
+#include "events.h"
 
 namespace lfw {
 //Possible file events that we can notify about
@@ -17,20 +18,20 @@ enum Notify { CHANGE_FILE_NAME = FILE_NOTIFY_CHANGE_FILE_NAME,
 	CHANGE_LAST_ACCESS = FILE_NOTIFY_CHANGE_LAST_ACCESS,
 };
 
-typedef std::function<void(const std::string&, const std::string&, unsigned)>
-	Callback;
-
 struct WatchData {
 	OVERLAPPED overlapped;
 	HANDLE dir_handle;
 	//Buffer to store file notification info in
 	std::array<char, 4 * 1024> info_buf;
 	std::string dir_name;
-	DWORD filter;
-	Callback callback
+	uint32_t filter;
+#ifdef NO_SDL
+	Callback callback;
 
-	WatchData(const Callback &callback, HANDLE handle,
-		const std::string &dir, DWORD filter);
+	WatchData(HANDLE handle, const std::string &dir, uint32_t filter, const Callback &cb);
+#else
+	WatchData(HANDLE handle, const std::string &dir, uint32_t filter);
+#endif
 };
 
 class WatchWin32 {
@@ -38,6 +39,10 @@ class WatchWin32 {
 	std::map<std::string, WatchData> watchers;
 	//Would we need to do something special for copying?
 	//clone the handles or something?
+#ifndef NO_SDL
+	//The SDL User event code for file events
+	static uint32_t event_code;
+#endif
 
 public:
 	WatchWin32();
@@ -47,10 +52,18 @@ public:
 	 * Filters is a set of the notify flags or'd
 	 * together to watch for
 	 */
-	void watch(const std::string &dir, unsigned filters, const Callback &callback);
+#ifdef NO_SDL
+	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
+#else
+	void watch(const std::string &dir, uint32_t filters);
+#endif
 	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();
+#ifndef NO_SDL
+	//Get the SDL user event code for events emitted by the watchers
+	static uint32_t event();
+#endif
 
 private:
 	WatchWin32(const WatchWin32 &w){
