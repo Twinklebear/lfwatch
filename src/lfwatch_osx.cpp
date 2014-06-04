@@ -23,6 +23,22 @@ void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
 			<< " on path " << paths[i] << "\n";
 	}
 }
+//Make and schedule a stream, the stream will use the watch as its context info
+void make_stream(WatchData &watch){
+	CFStringRef cfdir = CFStringCreateWithCString(nullptr,
+		watch.dir_name.c_str(), kCFStringEncodingUTF8);
+	CFArrayRef cfdirs = CFArrayCreate(nullptr, (const void**)&cfdir, 1, nullptr);
+
+	FSEventStreamContext ctx = { 0, &watch, nullptr, nullptr, nullptr };
+	watch.stream = FSEventStreamCreate(NULL, &watch_callback, &ctx, cfdirs,
+		kFSEventStreamEventIdSinceNow, 1.0, kFSEventStreamCreateFlagFileEvents);
+
+	FSEventStreamScheduleWithRunLoop(watch.stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+	FSEventStreamStart(watch.stream);
+
+	CFRelease(cfdir);
+	CFRelease(cfdirs);
+}
 void cancel(WatchData &watch){
 	//Probably should just do this in destructor
 	FSEventStreamStop(watch.stream);
@@ -33,27 +49,9 @@ void cancel(WatchData &watch){
 #ifdef NO_SDL
 WatchData::WatchData(const std::string &dir, uint32_t filter, const Callback &cb)
 	: dir_name(dir), filter(filter), callback(cb)
-{
-	CFStringRef cfdir = CFStringCreateWithCString(NULL, dir_name.c_str(), kCFStringEncodingUTF8);
-	CFArrayRef cfdirs = CFArrayCreate(NULL, (const void**)&cfdir, 1, NULL);
-	stream = FSEventStreamCreate(NULL, &watch_callback, NULL, cfdirs,
-		kFSEventStreamEventIdSinceNow, 3.0, kFSEventStreamCreateFlagFileEvents);
-	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	FSEventStreamStart(stream);
-	CFRelease(cfdir);
-	CFRelease(cfdirs);
-}
+{}
 #else
-WatchData::WatchData(const std::string &dir, uint32_t filter) : dir_name(dir), filter(filter){
-	CFStringRef cfdir = CFStringCreateWithCString(NULL, dir_name.c_str(), kCFStringEncodingUTF8);
-	CFArrayRef cfdirs = CFArrayCreate(NULL, (const void**)&cfdir, 1, NULL);
-	stream = FSEventStreamCreate(NULL, &watch_callback, NULL, cfdirs,
-		kFSEventStreamEventIdSinceNow, 3.0, kFSEventStreamCreateFlagFileEvents);
-	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	FSEventStreamStart(stream);
-	CFRelease(cfdir);
-	CFRelease(cfdirs);
-}
+WatchData::WatchData(const std::string &dir, uint32_t filter) : dir_name(dir), filter(filter){}
 #endif
 
 #ifndef NO_SDL
@@ -94,10 +92,11 @@ void WatchOSX::watch(const std::string &dir, uint32_t filters)
 		return;
 	}
 #ifdef NO_SDL
-	watchers.emplace(std::make_pair(dir, WatchData{dir, filters, callback}));
+	auto it = watchers.emplace(std::make_pair(dir, WatchData{dir, filters, callback}));
 #else
-	watchers.emplace(std::make_pair(dir, WatchData{dir, filters}));
+	auto it = watchers.emplace(std::make_pair(dir, WatchData{dir, filters}));
 #endif
+	make_stream(it.first->second);
 }
 void WatchOSX::remove(const std::string &dir){
 	auto fnd = watchers.find(dir);

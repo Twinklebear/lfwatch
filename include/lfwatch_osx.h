@@ -13,8 +13,13 @@ namespace lfw {
 //Possible file events that we can notify about
 enum Notify { FILE_CREATED = kFSEventStreamEventFlagItemCreated,
 	FILE_REMOVED = kFSEventStreamEventFlagItemRemoved,
-	FILE_RENAMED = kFSEventStreamEventFlagItemCreated,
-	FILE_MODIFIED = kFSEventStreamEventFlagItemModified
+	CHANGE_FILE_NAME = kFSEventStreamEventFlagItemCreated,
+	//Rename to change_last_modified?
+	CHANGE_LAST_WRITE = kFSEventStreamEventFlagItemModified,
+	CHANGE_ATTRIBUTES = kFSEventStreamEventFlagItemModified,
+	CHANGE_LAST_ACCESS = kFSEventStreamEventFlagItemModified,
+	//Not on OS X?
+	CHANGE_DIR_NAME = 0
 };
 
 struct WatchData {
