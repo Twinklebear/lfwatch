@@ -3,7 +3,6 @@
 #include "lfwatch.h"
 
 std::string notify_string(uint32_t mask){
-	std::cout << "mask: " << std::hex << mask << std::dec << std::endl;
 	std::string msg;
 	if (mask & lfw::Notify::FILE_MODIFIED){
 		msg += "FILE_MODIFIED ";
