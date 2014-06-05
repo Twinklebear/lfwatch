@@ -17,7 +17,7 @@ struct EventData {
 		uint32_t event);
 };
 
-typedef std::function<void(EventData data)> Callback;
+typedef std::function<void(const EventData &data)> Callback;
 
 }
 
