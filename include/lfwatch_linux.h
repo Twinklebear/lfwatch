@@ -50,7 +50,7 @@ class WatchLinux {
 public:
 	WatchLinux();
 	~WatchLinux();
-	/**
+	/*
 	 * Start watching some directory for file changes
 	 * Filters is a set of the notify flags or'd
 	 * together to watch for

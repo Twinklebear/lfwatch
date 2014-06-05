@@ -2,24 +2,32 @@
 #include <SDL.h>
 #include "lfwatch.h"
 
-std::string notify_string(unsigned mask){
+std::string notify_string(uint32_t mask){
+	std::cout << "mask: " << std::hex << mask << std::dec << std::endl;
 	std::string msg;
-	if (mask & lfw::Notify::CHANGE_FILE_NAME){
-		msg += "CHANGE_FILE_NAME ";
+	if (mask & lfw::Notify::FILE_MODIFIED){
+		msg += "FILE_MODIFIED ";
 	}
-	if (mask & lfw::Notify::CHANGE_DIR_NAME){
-		msg += "CHANGE_DIR_NAME ";
+	if (mask & lfw::Notify::FILE_CREATED){
+		msg += "FILE_CREATED ";
 	}
-	if (mask & lfw::Notify::CHANGE_ATTRIBUTES){
-		msg += "CHANGE_ATTRIBUTES ";
+	if (mask & lfw::Notify::FILE_REMOVED){
+		msg += "FILE_REMOVED ";
 	}
-	if (mask & lfw::Notify::CHANGE_LAST_WRITE){
-		msg += "CHANGE_LAST_WRITE ";
+	if (mask & lfw::Notify::FILE_RENAMED_OLD_NAME){
+		msg += "FILE_RENAMED_OLD_NAME";
 	}
-	if (mask & lfw::Notify::CHANGE_LAST_ACCESS){
-		msg += "CHANGE_LAST_ACCESS ";
+	if (mask & lfw::Notify::FILE_RENAMED_NEW_NAME){
+		msg += "FILE_RENAMED_NEW_NAME";
 	}
 	return msg;
+}
+uint32_t event;
+void push_event(const std::string &f){
+	SDL_Event evt = { 0 };
+	evt.type = event;
+	evt.user.data1 = new std::string{f};
+	SDL_PushEvent(&evt);
 }
 
 int main(int argc, char **argv){
@@ -31,19 +39,29 @@ int main(int argc, char **argv){
 		std::cerr << "SDL_Init error: " << SDL_GetError() << std::endl;
 		return 1;
 	}
+	event = SDL_RegisterEvents(1);
 	lfw::Watcher watcher;
-	watcher.watch(argv[1], lfw::Notify::CHANGE_LAST_WRITE);
-	watcher.watch(argv[2], lfw::Notify::CHANGE_FILE_NAME);
+	watcher.watch(argv[1], lfw::Notify::FILE_MODIFIED,
+		[](lfw::EventData e){
+			std::cout << notify_string(e.event) << " event in "
+				<< e.dir << " on file " << e.fname << "\n";
+			push_event(e.fname);
+		});
+
+	watcher.watch(argv[2], lfw::Notify::FILE_CREATED | lfw::Notify::FILE_REMOVED,
+		[](lfw::EventData e){
+			std::cout << notify_string(e.event) << " event in "
+				<< e.dir << " on file " << e.fname << "\n";
+			push_event(e.fname);
+		});
 
 	for (int i = 0; i < 5; ++i){
 		SDL_Event e;
 		while (SDL_PollEvent(&e)){
-			if (e.type == lfw::Watcher::event()){
-				lfw::EventData *data = static_cast<lfw::EventData*>(e.user.data1);
-				std::cout << notify_string(data->event)
-					<< " event in " << data->dir
-					<< " on file: " << data->fname << "\n";
-				delete data;
+			if (e.type == event){
+				std::string *f = static_cast<std::string*>(e.user.data1);
+				std::cout << "Got event on file: " << *f << std::endl;
+				delete f;
 			}
 		}
 		std::cout << "Press enter to update watchers > ";

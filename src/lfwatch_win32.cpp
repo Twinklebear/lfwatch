@@ -2,14 +2,11 @@
 
 #include <iostream>
 #include <cstring>
+#include <clocale>
 #include <string>
 #include <map>
+#include <vector>
 #include <windows.h>
-
-#ifndef NO_SDL
-#include <SDL.h>
-#endif
-
 #include "lfwatch_win32.h"
 
 namespace lfw {
@@ -27,132 +24,128 @@ std::string get_error_msg(DWORD err){
 	LocalFree(err_msg);
 	return msg;
 }
+//We use our own enums so they can be or'd together but can correspond to overlapping
+//Win32 FILE_NOTIFY or FILE_ACTION values, these functions remap the according file_action/notify
+//enums to our enums
+DWORD remap_file_notify(uint32_t mask){
+	DWORD remap = 0;
+	if (mask & Notify::FILE_MODIFIED){
+		remap |= FILE_NOTIFY_CHANGE_LAST_WRITE;
+	}
+	if (mask & Notify::FILE_CREATED || mask & Notify::FILE_REMOVED
+		|| mask & Notify::FILE_RENAMED_OLD_NAME || Notify::FILE_RENAMED_NEW_NAME)
+	{
+		remap |= FILE_NOTIFY_CHANGE_FILE_NAME;
+	}
+	return remap;
+}
+//The file action in the notify event only can be one value
+uint32_t remap_file_action(DWORD action){
+	switch (action){
+		case FILE_ACTION_MODIFIED:
+			return Notify::FILE_MODIFIED;
+		case FILE_ACTION_ADDED:
+			return Notify::FILE_CREATED;
+		case FILE_ACTION_REMOVED:
+			return Notify::FILE_REMOVED;
+		case FILE_ACTION_RENAMED_NEW_NAME:
+			return Notify::FILE_RENAMED_OLD_NAME;
+		case FILE_ACTION_RENAMED_OLD_NAME:
+			return Notify::FILE_RENAMED_NEW_NAME;
+		default:
+			return 0;
+	}
+}
+//Register a watch to receive events
 void register_watch(WatchData &watch){
 	std::memset(&watch.info_buf[0], 0, watch.info_buf.size());
 	bool status = ReadDirectoryChangesW(watch.dir_handle, &watch.info_buf[0],
-		watch.info_buf.size(), false, watch.filter, nullptr,
+		watch.info_buf.size(), false, remap_file_notify(watch.filter), nullptr,
 		&watch.overlapped, watch_callback);
 	if (!status){
 		std::cerr << "Error registering watch on " << watch.dir_name
 			<< ": " << get_error_msg(GetLastError()) << "\n";
 	}
 }
-//Win32 returns different enums in the file notify action member than what you
-//request in ReadDirectoryW so fix its stupidity and re-map to our enums
-uint32_t remap_file_action(DWORD action){
-	uint32_t remap = 0;
-	if (action & FILE_ACTION_ADDED){
-		//Add support?
-	}
-	if (action & FILE_ACTION_MODIFIED){
-		remap |= Notify::CHANGE_LAST_WRITE | Notify::CHANGE_ATTRIBUTES;
-	}
-	if (action & FILE_ACTION_REMOVED){
-		//Add support?
-	}
-	if (action & FILE_ACTION_RENAMED_NEW_NAME){
-		//Migrate our file name change to this method?
-	}
-	if (action & FILE_ACTION_RENAMED_OLD_NAME){
-		//Migrate our file name change to this method?
-	}
-	return remap;
-}
 void emit_events(WatchData &watch){
 	PFILE_NOTIFY_INFORMATION info;
 	size_t offset = 0;
 	do {
+		std::cout << "Reading event watcher dir: " << watch.dir_name << std::endl;
 		info = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(&watch.info_buf[0] + offset);
-		char fname[MAX_PATH + 1] = { 0 };
-		std::wcstombs(fname, info->FileName, info->FileNameLength);
-		//TODO: The NOTIFY_INFORMATION Action member is different from
-		//the listener mask we can set! And has fewer values!
-		//Maybe I'll only listen for write, add, delete, and moving of
-		//files
-#ifdef NO_SDL
-		watch.callback(EventData{watch.dir_name, fname, watch.filter,
-			remap_file_action(info->Action)});
-#else
-		SDL_Event sdl_evt;
-		SDL_zero(sdl_evt);
-		sdl_evt.type = WatchWin32::event();
-		sdl_evt.user.data1 = new EventData{watch.dir_name, fname, watch.filter,
-			remap_file_action(info->Action)};
-		sdl_evt.user.data2 = nullptr;
-		SDL_PushEvent(&sdl_evt);
-#endif
 		offset += info->NextEntryOffset;
+		//Sometimes we get no file name? Wierd Win32
+		if (info->FileNameLength == 0){
+			std::cout << "Empty fname\n";
+			continue;
+		}
+		//FileNameLength is size in bytes of the 16-bit Unicode string so, compute
+		//the max number of chars that it could contain
+		//This is done to put the null terminator on the end of the string since Win32 is stupid
+		int n_chars = info->FileNameLength / 2;
+		std::vector<wchar_t> wfname(n_chars + 1);
+		std::memcpy(&wfname[0], info->FileName, info->FileNameLength);
+		char fname[MAX_PATH + 1] = { 0 };
+		std::wcstombs(fname, &wfname[0], MAX_PATH);
+		std::cout << "fname: '" << fname << "'\n";
+		//Since FILE_NOTIFY_CHANGE_FILE_NAME gives all create/delete/rename events it's possible that
+		//we only want create but have gotten one of the other two, so make sure we actually want this
+		uint32_t action = remap_file_action(info->Action);
+		if (action & watch.filter){
+			std::cout << "event emitted\n";
+			watch.callback(EventData{watch.dir_name, fname, watch.filter, action});
+		}
+		std::cout << "event processed\n" << std::endl;
 	}
 	while (info->NextEntryOffset != 0);
 }
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
-	//Other errors ignored, Win32 gives me an invalid err when cancelling
+	std::cout << "Err: " << err << ", num_bytes: " << num_bytes << std::endl;
 	if (err == ERROR_SUCCESS){
 		WatchData *watch = reinterpret_cast<WatchData*>(overlapped);
 		emit_events(*watch);
 		//Re-register to listen again
 		register_watch(*watch);
 	}
+	//If we're being cancelled or the error is out of bounds don't log it
+	else if (err != ERROR_OPERATION_ABORTED && err <= 15841){
+		std::cerr << "lfw watch callback error: " << get_error_msg(err) << std::endl;
+	}
+	else if (err == ERROR_OPERATION_ABORTED){
+		//TODO: Just for debugging
+		std::cerr << "Aborting" << std::endl;
+	}
 }
 void cancel(WatchData &watch){
-	CancelIo(watch.dir_handle);
+	if (CancelIo(watch.dir_handle) == 0){
+		std::cerr << "Cancellation error " << get_error_msg(GetLastError()) << std::endl;
+	}
 	//How can we determine what/how long to wait for any running stuff to finish?
-	if (!HasOverlappedIoCompleted(&watch.overlapped)){
+	while (!HasOverlappedIoCompleted(&watch.overlapped)){
 		SleepEx(5, true);
 	}
 	CloseHandle(watch.dir_handle);
 }
 
-#ifdef NO_SDL
 WatchData::WatchData(HANDLE handle, const std::string &dir, uint32_t filter, const Callback &cb)
 	: dir_handle(handle), dir_name(dir), filter(filter), callback(cb)
 {
 	std::memset(&overlapped, 0, sizeof(overlapped));
 }
-#else
-WatchData::WatchData(HANDLE handle, const std::string &dir, uint32_t filter)
-	: dir_handle(handle), dir_name(dir), filter(filter)
-{
-	std::memset(&overlapped, 0, sizeof(overlapped));
-}
-#endif
 
-#ifndef NO_SDL
-//SDL uses (Uint32)-1 for invalid event code
-uint32_t WatchWin32::event_code = -1;
-#endif
-
-WatchWin32::WatchWin32(){
-#ifndef NO_SDL
-	//Check if we've initialized the SDL event code, invalid ids are
-	//(Uint32)-1
-	if (event_code == static_cast<uint32_t>(-1)){
-		event_code = SDL_RegisterEvents(1);
-		if (event_code == static_cast<uint32_t>(-1)){
-			std::cerr << "Failed to get event code from SDL: "
-				<< SDL_GetError() << std::endl;
-			assert(false);
-		}
-	}
-#endif
-
-}
+WatchWin32::WatchWin32(){}
 WatchWin32::~WatchWin32(){
 	for (auto &pair : watchers){
 		cancel(pair.second);
 	}
 }
-#ifdef NO_SDL
-void WatchWin32::watch(const std::string &dir, uint32_t filters, const Callback &callback)
-#else
-void WatchWin32::watch(const std::string &dir, uint32_t filters)
-#endif
-{
+void WatchWin32::watch(const std::string &dir, uint32_t filters, const Callback &callback){
 	auto fnd = watchers.find(dir);
 	if (fnd != watchers.end()){
 		//If we're updating an existing watch with new filters or subtree status
 		if (fnd->second.filter != filters){
 			fnd->second.filter = filters;
+			fnd->second.callback = callback;
 			register_watch(fnd->second);
 		}
 		return;
@@ -166,11 +159,7 @@ void WatchWin32::watch(const std::string &dir, uint32_t filters)
 			<< ": " << get_error_msg(GetLastError()) << "\n";
 		return;
 	}
-#ifdef NO_SDL
 	auto it = watchers.emplace(std::make_pair(dir, WatchData{handle, dir, filters, callback}));
-#else
-	auto it = watchers.emplace(std::make_pair(dir, WatchData{handle, dir, filters}));
-#endif
 	register_watch(it.first->second);
 }
 void WatchWin32::remove(const std::string &dir){
@@ -183,11 +172,6 @@ void WatchWin32::remove(const std::string &dir){
 void WatchWin32::update(){
 	MsgWaitForMultipleObjectsEx(0, nullptr, 0, QS_ALLINPUT, MWMO_ALERTABLE);
 }
-#ifndef NO_SDL
-uint32_t WatchWin32::event(){
-	return event_code;
-}
-#endif
 }
 
 #endif

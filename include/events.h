@@ -2,9 +2,7 @@
 #define EVENTS_H
 
 #include <string>
-#ifdef NO_SDL
 #include <functional>
-#endif
 
 namespace lfw {
 //Struct returned to callbacks or in the SDL event containg information
@@ -18,9 +16,9 @@ struct EventData {
 	EventData(const std::string &dir, const std::string &fname, uint32_t filter,
 		uint32_t event);
 };
-#ifdef NO_SDL
+
 typedef std::function<void(EventData data)> Callback;
-#endif
+
 }
 
 #endif

@@ -2,22 +2,23 @@
 #include <functional>
 #include "lfwatch.h"
 
-std::string notify_string(unsigned mask){
+std::string notify_string(uint32_t mask){
+	std::cout << "mask: " << std::hex << mask << std::dec << std::endl;
 	std::string msg;
-	if (mask & lfw::Notify::CHANGE_FILE_NAME){
-		msg += "CHANGE_FILE_NAME ";
+	if (mask & lfw::Notify::FILE_MODIFIED){
+		msg += "FILE_MODIFIED ";
 	}
-	if (mask & lfw::Notify::CHANGE_DIR_NAME){
-		msg += "CHANGE_DIR_NAME ";
+	if (mask & lfw::Notify::FILE_CREATED){
+		msg += "FILE_CREATED ";
 	}
-	if (mask & lfw::Notify::CHANGE_ATTRIBUTES){
-		msg += "CHANGE_ATTRIBUTES ";
+	if (mask & lfw::Notify::FILE_REMOVED){
+		msg += "FILE_REMOVED ";
 	}
-	if (mask & lfw::Notify::CHANGE_LAST_WRITE){
-		msg += "CHANGE_LAST_WRITE ";
+	if (mask & lfw::Notify::FILE_RENAMED_OLD_NAME){
+		msg += "FILE_RENAMED_OLD_NAME";
 	}
-	if (mask & lfw::Notify::CHANGE_LAST_ACCESS){
-		msg += "CHANGE_LAST_ACCESS ";
+	if (mask & lfw::Notify::FILE_RENAMED_NEW_NAME){
+		msg += "FILE_RENAMED_NEW_NAME";
 	}
 	return msg;
 }
@@ -28,13 +29,13 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	lfw::Watcher watcher;
-	watcher.watch(argv[1], lfw::Notify::CHANGE_LAST_WRITE,
+	watcher.watch(argv[1], lfw::Notify::FILE_MODIFIED,
 		[](lfw::EventData e){
 			std::cout << notify_string(e.event) << " event in "
 				<< e.dir << " on file " << e.fname << "\n";
 		});
 
-	watcher.watch(argv[2], lfw::Notify::CHANGE_FILE_NAME,
+	watcher.watch(argv[2], lfw::Notify::FILE_CREATED | lfw::Notify::FILE_REMOVED,
 		[](lfw::EventData e){
 			std::cout << notify_string(e.event) << " event in "
 				<< e.dir << " on file " << e.fname << "\n";
