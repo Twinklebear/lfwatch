@@ -5,11 +5,6 @@
 #include <map>
 #include <functional>
 #include <CoreServices/CoreServices.h>
-
-#ifndef NO_SDL
-#include <SDL.h>
-#endif
-
 #include "lfwatch_osx.h"
 
 namespace lfw {
@@ -31,7 +26,6 @@ uint32_t remap_file_notify(uint32_t mask){
 	}
 	return remap;
 }
-
 void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
 	void *event_paths, const FSEventStreamEventFlags flags[],
 	const FSEventStreamEventId ids[])
@@ -47,15 +41,14 @@ void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
 			std::string fname{paths[i]};
 			fname = fname.substr(fname.find_last_of('/') + 1);
 			uint32_t action = flags[i];
-			//Check if it's an old name or new name event, it's assumed these events
-			//are going to be consecutive ie an old name comes before a new name
+			//Check if it's a rename event and what type of rename we're expecting, ie. old/new name
 			if (flags[i] & kFSEventStreamEventFlagItemRenamed){
 				if (!renaming && watch->filter & Notify::FILE_RENAMED_OLD_NAME){
 					renaming = true;
 					action = Notify::FILE_RENAMED_OLD_NAME;
 				}
 				else if (renaming && watch->filter & Notify::FILE_RENAMED_NEW_NAME){
-					renaming = true;
+					renaming = false;
 					action = Notify::FILE_RENAMED_NEW_NAME;
 
 				}

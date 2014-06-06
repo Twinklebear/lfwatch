@@ -10,11 +10,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
-
-#ifndef NO_SDL
-#include <SDL.h>
-#endif
-
 #include "lfwatch_linux.h"
 
 namespace lfw {
