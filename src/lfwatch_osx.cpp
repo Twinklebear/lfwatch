@@ -43,14 +43,17 @@ void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
 			uint32_t action = flags[i];
 			//Check if it's a rename event and what type of rename we're expecting, ie. old/new name
 			if (flags[i] & kFSEventStreamEventFlagItemRenamed){
-				if (!renaming && watch->filter & Notify::FILE_RENAMED_OLD_NAME){
+				if (!renaming){
 					renaming = true;
-					action = Notify::FILE_RENAMED_OLD_NAME;
+					if (watch->filter & Notify::FILE_RENAMED_OLD_NAME){
+						action = Notify::FILE_RENAMED_OLD_NAME;
+					}
 				}
-				else if (renaming && watch->filter & Notify::FILE_RENAMED_NEW_NAME){
+				else {
 					renaming = false;
-					action = Notify::FILE_RENAMED_NEW_NAME;
-
+					if (watch->filter & Notify::FILE_RENAMED_NEW_NAME){
+						action = Notify::FILE_RENAMED_NEW_NAME;
+					}
 				}
 			}
 			watch->callback(EventData{watch->dir_name, fname, watch->filter, action});
