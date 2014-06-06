@@ -48,9 +48,9 @@ uint32_t remap_file_action(DWORD action){
 			return Notify::FILE_CREATED;
 		case FILE_ACTION_REMOVED:
 			return Notify::FILE_REMOVED;
-		case FILE_ACTION_RENAMED_NEW_NAME:
-			return Notify::FILE_RENAMED_OLD_NAME;
 		case FILE_ACTION_RENAMED_OLD_NAME:
+			return Notify::FILE_RENAMED_OLD_NAME;
+		case FILE_ACTION_RENAMED_NEW_NAME:
 			return Notify::FILE_RENAMED_NEW_NAME;
 		default:
 			return 0;

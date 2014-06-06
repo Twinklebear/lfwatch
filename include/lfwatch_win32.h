@@ -6,7 +6,6 @@
 #include <string>
 #include <array>
 #include <map>
-#include <functional>
 #include <windows.h>
 #include "events.h"
 
