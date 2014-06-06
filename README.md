@@ -1,26 +1,22 @@
 lfwatch - A LightFileWatcher
 =
-A very lightweight file watcher for Windows (in progress), Linux (in progress) and OS X (coming soon). Monitors a
-directory for file changes and pushes an SDL user event containing information about the change or if
-compiled without SDL2 support can call a custom user function for each directory being watched.
-
-Dependencies
--
-- [SDL2](http://libsdl.org/) if using the SDL2 event pushing version.
+A lightweight file watcher for Windows, Linux and OS X. Monitors a directory for file changes and calls
+the callback set for the directory with information about the event.
 
 Building
 -
-Uses CMake to build, to disable the SDL2 event path run CMake with `-DNO_SDL`. This version will
-take a `std::function` to be called on an event. This isn't currently implemented so I haven't decided
-on what the function signature should be. A different callback can be registered for each directory being
-watched.
+The library uses CMake to build and compiles to a static linked library. If you want to build the demo
+pass `-DBUILD_DEMO=1` when you run CMake.
 
-Examples
+Documentation
 -
-The library is very simple, create an `lfw::Watcher` and then select the directories and changes you
-want to watch for with the `watch` method and call `update` to let the watcher get information about any changes.
-The SDL User event or registered callbacks are passed an `lfw::EventData` struct containing information about the event.
+### Callback
+The callback set for each watched directory should be a `std::function<void(const lfw::EventData&)>`. This is
+also typedef'd as `lfw::Callback`.
 
+### EventData
+The `lfw::EventData` struct passed to your callback contains information about the watched directory and
+event filters along with the file name and event that was caught.
 ```c++
 struct EventData {
 	//dir: the directory being watched
@@ -32,44 +28,55 @@ struct EventData {
 };
 ```
 
-If we preferred to use SDL events to feed us back information about what files changed so that we
-could handle it normally in our event loop it would look like this.
+### Notify Filters and Events
+There are five types of events you can watch directory for and receive events about. To watch for multiple event types
+you can or the desired flags together.
+- `lfw::Notify::FILE_MODIFIED`: A file was modified. This could be an attribute change or a new write to the file.
+- `lfw::Notify::FILE_CREATED`: A file was created.
+- `lfw::Notify::FILE_REMOVED`: A file was removed.
+- `lfw::Notify::FILE_RENAMED_OLD_NAME`: A file was renamed and this is its old name
+- `lfw::Notify::FILE_RENAMED_NEW_NAME`: A file was renamed and this is its new name
 
+Note: For rename events there isn't information to absolutely associate the old file with the new file name. Although
+on Linux inotify gives you an associated number with the rename event it doesn't seem like Windows or OS X do that.
+Keep this in mind if you might be watching a lot of rename events.
+
+### Watcher
+The `lfw::Watcher` is what manages the watched directories and is responsible for adding, removing and updating existing
+watches along with cleaning them up when it's destroyed.
+
+To add a new directory to be watched or to update an existing watch with new filters and/or callback call `watch`.
+The function takes the directory name, your `lfw::Notify` filters or'd together and the callback to call.
 ```c++
-//Initialize SDL before creating the watcher
-lfw::Watcher watcher;
-//Watch for file writes in 'some_directory'
-//Note: you can OR multiple filters together to watch for multiple events
-watcher.watch("some_directory", lfw::Notify::CHANGE_LAST_WRITE);
-
-//In your update loop notify the watcher to update itself
-watcher.update();
-
-//Now file events will show up as SDL user events in our event loop
-SDL_Event e;
-while (SDL_PollEvent(&e)){
-	if (e.type == lfw::Watcher::event()){
-		//Retrieve the information about the event from the SDL user event
-		lfw::EventData *data = static_cast<lfw::EventData*>(e.user.data1);
-		std::cout << "File " << data->fname << " was written to\n";
-		//We need to delete it since it's passed on the heap
-		delete data;
-	}
-}
+void watch(const std::string &dir, uint32_t filters, const Callback &callback);
 ```
 
-If instead we wanted to use our own callbacks to get the event information it'd look more like this.
+To remove a directory from the watch list call `remove` and pass the directory name to be removed.
+```c++
+void remove(const std::string &dir);
+```
+
+To update the watched directories and receive new events that may have occured you must call `update`.
+```c++
+void update();
+```
+Example
+-
+To watch for file modification changes in "some_directory" and print out the name of the modified file we
+will create a watcher, set a watch on the directory with the filters and callback we want and then call update
+in our update loop somewhere.
 
 ```c++
 lfw::Watcher watcher;
 //Watch for file writes in 'some_directory' and call our lambda when one happens
-//Note: you can OR multiple filters together to watch for multiple events
-watcher.watch("some_directory", lfw::Notify::CHANGE_LAST_WRITE
-	[](lfw::EventData e){
+watcher.watch("some_directory", lfw::Notify::FILE_MODIFIED
+	[](const lfw::EventData &e){
 		std::cout << "File " << e.fname << " was written to\n";
 	});
 
 //In your update loop notify the watcher to update itself
 watcher.update();
 ```
+
+A runnable example is under demo which shows usage of the various filters available and demonstrates adding/removing/updating watches.
 

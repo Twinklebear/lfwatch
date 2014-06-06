@@ -17,14 +17,8 @@ if (APPLE)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework CoreFoundation -framework CoreServices")
 endif()
 
-# This will be removed soon but I want to make sure there's no bugs with the other demo
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LFWATCH_SOURCE_DIR}/cmake")
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR})
-
 include_directories(include)
 add_subdirectory(src)
-# Only build the demos if we want to see them
 if (DEFINED BUILD_DEMO)
 	add_subdirectory(demo)
 endif()
