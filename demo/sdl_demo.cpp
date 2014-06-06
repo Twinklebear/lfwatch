@@ -47,7 +47,8 @@ int main(int argc, char **argv){
 			push_event(e.fname);
 		});
 
-	watcher.watch(argv[2], lfw::Notify::FILE_CREATED | lfw::Notify::FILE_REMOVED,
+	watcher.watch(argv[2], lfw::Notify::FILE_CREATED | lfw::Notify::FILE_REMOVED
+			| lfw::Notify::FILE_RENAMED_OLD_NAME | lfw::Notify::FILE_RENAMED_NEW_NAME,
 		[](lfw::EventData e){
 			std::cout << notify_string(e.event) << " event in "
 				<< e.dir << " on file " << e.fname << "\n";

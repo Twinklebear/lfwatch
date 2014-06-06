@@ -129,13 +129,10 @@ WatchWin32::~WatchWin32(){
 }
 void WatchWin32::watch(const std::string &dir, uint32_t filters, const Callback &callback){
 	auto fnd = watchers.find(dir);
-	if (fnd != watchers.end()){
-		//If we're updating an existing watch with new filters or subtree status
-		if (fnd->second.filter != filters){
-			fnd->second.filter = filters;
-			fnd->second.callback = callback;
-			register_watch(fnd->second);
-		}
+	if (fnd != watchers.end() && fnd->second.filter != filters){
+		fnd->second.filter = filters;
+		fnd->second.callback = callback;
+		register_watch(fnd->second);
 		return;
 	}
 	HANDLE handle = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY,
