@@ -13,14 +13,55 @@
 #include "lfwatch_osx.h"
 
 namespace lfw {
+//Remap our notify enums to match OS X event flags, we really just need to
+//convert our old/new name values but to avoid any future conflicts we remap all of it
+uint32_t remap_file_notify(uint32_t mask){
+	uint32_t remap = 0;
+	if (mask & Notify::FILE_MODIFIED){
+		remap |= Notify::FILE_MODIFIED;
+	}
+	if (mask & Notify::FILE_CREATED){
+		remap |= Notify::FILE_CREATED;
+	}
+	if (mask & Notify::FILE_REMOVED){
+		remap |= Notify::FILE_REMOVED;
+	}
+	if (mask & FILE_RENAMED_OLD_NAME || mask & FILE_RENAMED_NEW_NAME){
+		remap |= kFSEventStreamEventFlagItemRenamed;
+	}
+	return remap;
+}
+
 void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
-	void *event_paths, const FSEventStreamEventFlags flags[], const FSEventStreamEventId ids[])
+	void *event_paths, const FSEventStreamEventFlags flags[],
+	const FSEventStreamEventId ids[])
 {
+	//Tracks if we're looking for a new name event or not
+	bool renaming = false;
 	WatchData *watch = static_cast<WatchData*>(data);
 	char **paths = static_cast<char**>(event_paths);
 	for (size_t i = 0; i < n_events; ++i){
-		std::cout << "Event in " << watch->dir_name
-			<< " on path " << paths[i] << "\n";
+		//OS X just sends all events so we filter here
+		if (flags[i] & remap_file_notify(watch->filter)){
+			//OS X sends full path so get the filename out
+			std::string fname{paths[i]};
+			fname = fname.substr(fname.find_last_of('/') + 1);
+			uint32_t action = flags[i];
+			//Check if it's an old name or new name event, it's assumed these events
+			//are going to be consecutive ie an old name comes before a new name
+			if (flags[i] & kFSEventStreamEventFlagItemRenamed){
+				if (!renaming && watch->filter & Notify::FILE_RENAMED_OLD_NAME){
+					renaming = true;
+					action = Notify::FILE_RENAMED_OLD_NAME;
+				}
+				else if (renaming && watch->filter & Notify::FILE_RENAMED_NEW_NAME){
+					renaming = true;
+					action = Notify::FILE_RENAMED_NEW_NAME;
+
+				}
+			}
+			watch->callback(EventData{watch->dir_name, fname, watch->filter, action});
+		}
 	}
 }
 //Make and schedule a stream, the stream will use the watch as its context info
@@ -31,9 +72,11 @@ void make_stream(WatchData &watch){
 
 	FSEventStreamContext ctx = { 0, &watch, nullptr, nullptr, nullptr };
 	watch.stream = FSEventStreamCreate(NULL, &watch_callback, &ctx, cfdirs,
-		kFSEventStreamEventIdSinceNow, 1.0, kFSEventStreamCreateFlagFileEvents);
+		kFSEventStreamEventIdSinceNow, 1.0,
+		kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer);
 
-	FSEventStreamScheduleWithRunLoop(watch.stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+	FSEventStreamScheduleWithRunLoop(watch.stream, CFRunLoopGetCurrent(),
+		kCFRunLoopDefaultMode);
 	FSEventStreamStart(watch.stream);
 
 	CFRelease(cfdir);
@@ -46,56 +89,24 @@ void cancel(WatchData &watch){
 	FSEventStreamRelease(watch.stream);
 }
 
-#ifdef NO_SDL
 WatchData::WatchData(const std::string &dir, uint32_t filter, const Callback &cb)
 	: dir_name(dir), filter(filter), callback(cb)
 {}
-#else
-WatchData::WatchData(const std::string &dir, uint32_t filter) : dir_name(dir), filter(filter){}
-#endif
 
-#ifndef NO_SDL
-//SDL uses (Uint32)-1 for invalid event code
-uint32_t WatchOSX::event_code = -1;
-#endif
-
-WatchOSX::WatchOSX(){
-#ifndef NO_SDL
-	//Check if we've intialized the SDL event code, invalid ids are (Uint32)-1
-	if (event_code == static_cast<uint32_t>(-1)){
-		event_code = SDL_RegisterEvents(1);
-		if (event_code == static_cast<uint32_t>(-1)){
-			std::cerr << "Failed to get event code from SDL: "
-				<< SDL_GetError() << std::endl;
-			assert(false);
-		}
-	}
-#endif
-}
+WatchOSX::WatchOSX(){}
 WatchOSX::~WatchOSX(){
 	for (auto &pair : watchers){
 		cancel(pair.second);
 	}
 }
-#ifdef NO_SDL
-void WatchOSX::watch(const std::string &dir, uint32_t filters, const Callback &callback)
-#else
-void WatchOSX::watch(const std::string &dir, uint32_t filters)
-#endif
-{
+void WatchOSX::watch(const std::string &dir, uint32_t filters, const Callback &callback){
 	auto fnd = watchers.find(dir);
 	if (fnd != watchers.end()){
 		fnd->second.filter = filters;
-#ifdef NO_SDL
 		fnd->second.callback = callback;
-#endif
 		return;
 	}
-#ifdef NO_SDL
 	auto it = watchers.emplace(std::make_pair(dir, WatchData{dir, filters, callback}));
-#else
-	auto it = watchers.emplace(std::make_pair(dir, WatchData{dir, filters}));
-#endif
 	make_stream(it.first->second);
 }
 void WatchOSX::remove(const std::string &dir){
@@ -108,12 +119,6 @@ void WatchOSX::remove(const std::string &dir){
 void WatchOSX::update(){
 	CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
 }
-#ifndef NO_SDL
-uint32_t WatchOSX::event(){
-	return event_code;
-}
-#endif
-
 }
 
 #endif

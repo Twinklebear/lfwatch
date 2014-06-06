@@ -11,38 +11,27 @@
 
 namespace lfw {
 //Possible file events that we can notify about
-enum Notify { FILE_CREATED = kFSEventStreamEventFlagItemCreated,
+enum Notify { 
+	FILE_MODIFIED = kFSEventStreamEventFlagItemModified,
+	FILE_CREATED = kFSEventStreamEventFlagItemCreated,
 	FILE_REMOVED = kFSEventStreamEventFlagItemRemoved,
-	CHANGE_FILE_NAME = kFSEventStreamEventFlagItemCreated,
-	//Rename to change_last_modified?
-	CHANGE_LAST_WRITE = kFSEventStreamEventFlagItemModified,
-	CHANGE_ATTRIBUTES = kFSEventStreamEventFlagItemModified,
-	CHANGE_LAST_ACCESS = kFSEventStreamEventFlagItemModified,
-	//Not on OS X?
-	CHANGE_DIR_NAME = 0
+	//OS X uses same event flag for these so pick non-conflicting names
+	FILE_RENAMED_OLD_NAME = 0x10000000,
+	FILE_RENAMED_NEW_NAME = 0x20000000
 };
 
 struct WatchData {
 	FSEventStreamRef stream;
 	std::string dir_name;
 	uint32_t filter;
-#ifdef NO_SDL
 	Callback callback;
 
 	WatchData(const std::string &dir, uint32_t filter, const Callback &cb);
-#else
-	WatchData(const std::string &dir, uint32_t filter);
-#endif
-	//Destructor to free? Could also do that method on Win32
 };
 
 class WatchOSX {
 	//Active watches { dir_name, watcher info }
 	std::map<std::string, WatchData> watchers;
-#ifndef NO_SDL
-	//The SDL User event code for file events
-	static uint32_t event_code;
-#endif
 
 public:
 	WatchOSX();
@@ -52,18 +41,10 @@ public:
 	 * Filters is a set of the notify flags or'd
 	 * together to watch for
 	 */
-#ifdef NO_SDL
 	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
-#else
-	void watch(const std::string &dir, uint32_t filters);
-#endif
 	void remove(const std::string &dir);
 	//Update watchers, call this to get event information updated
 	void update();
-#ifndef NO_SDL
-	//Get the SDL user event code for events emitted by the watchers
-	static uint32_t event();
-#endif
 
 private:
 	WatchOSX(const WatchOSX &w){
