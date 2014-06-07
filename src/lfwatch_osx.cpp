@@ -79,7 +79,6 @@ void make_stream(WatchData &watch){
 	CFRelease(cfdirs);
 }
 void cancel(WatchData &watch){
-	//Probably should just do this in destructor
 	FSEventStreamStop(watch.stream);
 	FSEventStreamInvalidate(watch.stream);
 	FSEventStreamRelease(watch.stream);
