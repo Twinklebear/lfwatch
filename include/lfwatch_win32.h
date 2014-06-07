@@ -39,6 +39,8 @@ class WatchWin32 {
 
 public:
 	WatchWin32();
+	WatchWin32(const WatchWin32 &w) = delete;
+	WatchWin32& operator=(const WatchWin32 &w) = delete;
 	~WatchWin32();
 	/*
 	 * Start watching some directory for file changes
@@ -49,15 +51,6 @@ public:
 	void remove(const std::string &dir);
 	//Update watchers. I'd really like to put this on some background thread though
 	void update();
-
-private:
-	WatchWin32(const WatchWin32 &w){
-		//TODO: Rule of 3
-	}
-	WatchWin32& operator=(const WatchWin32 &w){
-		//TODO: Rule of 3
-		return *this;
-	}
 };
 }
 

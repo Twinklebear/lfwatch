@@ -37,6 +37,8 @@ class WatchLinux {
 
 public:
 	WatchLinux();
+	WatchLinux(const WatchLinux &w) = delete;
+	WatchLinux& operator=(const WatchLinux &w) = delete;
 	~WatchLinux();
 	/*
 	 * Start watching some directory for file changes
@@ -49,13 +51,6 @@ public:
 	void update();
 
 private:
-	WatchLinux(const WatchLinux &w){
-		//TODO Rule of 3
-	}
-	WatchLinux& operator=(const WatchLinux &w){
-		//TODO Rule of 3
-		return *this;
-	}
 	//Run through all inotify events in the buffer and emit them
 	void emit_events(const char *buf, int len);
 	//Look up a watcher by name and return the iterator to it

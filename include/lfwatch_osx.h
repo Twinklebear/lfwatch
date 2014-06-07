@@ -11,7 +11,7 @@
 
 namespace lfw {
 //Possible file events that we can notify about
-enum Notify { 
+enum Notify {
 	FILE_MODIFIED = kFSEventStreamEventFlagItemModified,
 	FILE_CREATED = kFSEventStreamEventFlagItemCreated,
 	FILE_REMOVED = kFSEventStreamEventFlagItemRemoved,
@@ -35,6 +35,8 @@ class WatchOSX {
 
 public:
 	WatchOSX();
+	WatchOSX(const WatchOSX &w) = delete;
+	WatchOSX& operator=(const WatchOSX &w) = delete;
 	~WatchOSX();
 	/*
 	 * Start watching some directory for file changes
@@ -45,15 +47,6 @@ public:
 	void remove(const std::string &dir);
 	//Update watchers, call this to get event information updated
 	void update();
-
-private:
-	WatchOSX(const WatchOSX &w){
-		//TODO: Rule of 3
-	}
-	WatchOSX& operator=(const WatchOSX &w){
-		//TODO: Rule of 3
-		return *this;
-	}
 };
 }
 
