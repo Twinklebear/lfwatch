@@ -58,7 +58,7 @@ you can or the desired flags together.
 - `lfw::Notify::FILE_RENAMED_OLD_NAME`: A file was renamed and this is its old name
 - `lfw::Notify::FILE_RENAMED_NEW_NAME`: A file was renamed and this is its new name
 
-Note: For rename events there isn't information to absolutely associate the old name with the new name event. Although
+**Note**: For rename events there isn't information to absolutely associate the old name with the new name event. Although
 on Linux inotify gives you an associated number with the rename event it doesn't seem like Windows or OS X do that.
 Keep this in mind if you might be watching a lot of rename events.
 

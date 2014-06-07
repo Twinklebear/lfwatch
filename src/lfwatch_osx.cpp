@@ -37,9 +37,7 @@ void watch_callback(ConstFSEventStreamRef stream, void *data, size_t n_events,
 	for (size_t i = 0; i < n_events; ++i){
 		//OS X just sends all events so we filter here
 		if (flags[i] & remap_file_notify(watch->filter)){
-			//OS X sends full path so get the filename out. TODO: Check this is the right
-			//behavior for directory names as well, ie. does it give /src/ or /src?
-			//if the first case we would give an empty fname which is wrong
+			//OS X sends full path so get the filename out
 			std::string fname{paths[i]};
 			fname = fname.substr(fname.find_last_of('/') + 1);
 			uint32_t action = flags[i];
