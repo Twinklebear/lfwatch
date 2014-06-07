@@ -22,7 +22,6 @@ enum Notify {
 struct WatchData {
 	OVERLAPPED overlapped;
 	HANDLE dir_handle;
-	//Buffer to store file notification info in
 	std::array<char, 4 * 1024> info_buf;
 	std::string dir_name;
 	uint32_t filter;
@@ -34,8 +33,6 @@ struct WatchData {
 class WatchWin32 {
 	//Active watches { dir_name, watcher info }
 	std::map<std::string, WatchData> watchers;
-	//Would we need to do something special for copying?
-	//clone the handles or something?
 
 public:
 	WatchWin32();
@@ -49,7 +46,7 @@ public:
 	 */
 	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
 	void remove(const std::string &dir);
-	//Update watchers. I'd really like to put this on some background thread though
+	//Update watches to get new events
 	void update();
 };
 }

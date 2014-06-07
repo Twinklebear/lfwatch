@@ -47,7 +47,7 @@ public:
 	 */
 	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
 	void remove(const std::string &dir);
-	//Update watchers. I'd really like to put this on some background thread though
+	//Update watches to get new events
 	void update();
 
 private:

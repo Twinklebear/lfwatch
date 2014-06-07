@@ -45,7 +45,7 @@ public:
 	 */
 	void watch(const std::string &dir, uint32_t filters, const Callback &callback);
 	void remove(const std::string &dir);
-	//Update watchers, call this to get event information updated
+	//Update watches to get new events
 	void update();
 };
 }
