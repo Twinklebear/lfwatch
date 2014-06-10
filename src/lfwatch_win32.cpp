@@ -92,11 +92,13 @@ void emit_events(WatchData &watch){
 	while (info->NextEntryOffset != 0);
 }
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
+	SetEvent(overlapped->hEvent);
 	if (err == ERROR_SUCCESS){
 		WatchData *watch = reinterpret_cast<WatchData*>(overlapped);
 		emit_events(*watch);
 		//Re-register to listen again
 		register_watch(*watch);
+		ResetEvent(overlapped->hEvent);
 	}
 	//If we're being cancelled it's not an error
 	else if (err != ERROR_OPERATION_ABORTED){
@@ -108,17 +110,22 @@ void cancel(WatchData &watch){
 		std::cerr << "lfw Error: cancelling watch: "
 			<< get_error_msg(GetLastError()) << std::endl;
 	}
-	//How can we determine what/how long to wait for any running stuff to finish?
-	while (!HasOverlappedIoCompleted(&watch.overlapped)){
-		SleepEx(5, true);
+	//Give the watcher time to get the cancellation event and set the event
+	MsgWaitForMultipleObjectsEx(0, nullptr, 0, QS_ALLINPUT, MWMO_ALERTABLE);
+	DWORD status = WaitForSingleObject(watch.overlapped.hEvent, INFINITE);
+	if (status == WAIT_FAILED){
+		std::cerr << "lfw Error: failed to wait for cancellation: "
+			<< get_error_msg(GetLastError()) << std::endl;
 	}
 	CloseHandle(watch.dir_handle);
+	CloseHandle(watch.overlapped.hEvent);
 }
 
 WatchData::WatchData(HANDLE handle, const std::string &dir, uint32_t filter, const Callback &cb)
 	: dir_handle(handle), dir_name(dir), filter(filter), callback(cb)
 {
 	std::memset(&overlapped, 0, sizeof(overlapped));
+	overlapped.hEvent = CreateEvent(nullptr, true, false, nullptr);
 }
 
 WatchWin32::WatchWin32(){}
