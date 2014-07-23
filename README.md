@@ -17,7 +17,7 @@ in our update loop.
 ```c++
 lfw::Watcher watcher;
 //Watch for file writes in 'some_directory' and call our lambda when one happens
-watcher.watch("some_directory", lfw::Notify::FILE_MODIFIED
+watcher.watch("some_directory", lfw::Notify::FILE_MODIFIED,
 	[](const lfw::EventData &e){
 		std::cout << "File " << e.fname << " was written to\n";
 	});
