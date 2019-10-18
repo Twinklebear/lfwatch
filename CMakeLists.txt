@@ -21,7 +21,5 @@ endif()
 
 include_directories(include)
 add_subdirectory(src)
-if (DEFINED BUILD_DEMO)
-	add_subdirectory(demo)
-endif()
+add_subdirectory(demo)
 

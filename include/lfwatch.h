@@ -6,7 +6,7 @@
 namespace lfw {
 #ifdef __linux
 typedef WatchLinux Watcher;
-#elif defined(__WIN32)
+#elif defined(_WIN32)
 typedef WatchWin32 Watcher;
 #elif defined(__APPLE__)
 typedef WatchOSX Watcher;
