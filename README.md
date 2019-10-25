@@ -5,8 +5,11 @@ the callback set for the directory with information about the event.
 
 Building
 -
-The library uses CMake to build and compiles to a static linked library. If you want to build the demo
-pass `-DBUILD_DEMO=1` when you run CMake.
+The library uses CMake to build and compiles to a static linked library.
+
+### CMake options
+
+`LFWATCH_BUILD_DEMO` : Build the demo(default ON)
 
 Example
 -
