@@ -73,25 +73,32 @@ void emit_events(WatchData &watch){
 	do {
 		info = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(&watch.info_buf[0] + offset);
 		offset += info->NextEntryOffset;
-		//FileNameLength is size in bytes of the 16-bit Unicode string so, compute
-		//the max number of chars that it could contain
-		//This is done to put the null terminator on the end of the string since
-		//Win32 doesn't null-terminate
-		int n_chars = info->FileNameLength / 2;
-		std::vector<wchar_t> wfname(n_chars + 1);
-		std::memcpy(&wfname[0], info->FileName, info->FileNameLength);
-		char fname[MAX_PATH + 1] = { 0 };
-		std::wcstombs(fname, &wfname[0], MAX_PATH);
+		
 		//Since FILE_NOTIFY_CHANGE_FILE_NAME gives all create/delete/rename events it's possible that
 		//we only want create but have gotten one of the other two, so make sure we actually want this
 		uint32_t action = remap_file_action(info->Action);
 		if (action & watch.filter){
+			//FileNameLength is size in bytes of the 16-bit Unicode string so, compute
+			//the max number of chars that it could contain
+			//This is done to put the null terminator on the end of the string since
+			//Win32 doesn't null-terminate
+			int n_chars = info->FileNameLength / 2;
+			std::vector<wchar_t> wfname(n_chars + 1);
+			std::memcpy(&wfname[0], info->FileName, info->FileNameLength);
+			char fname[MAX_PATH + 1];
+			size_t ret;
+			wcstombs_s(&ret, fname, sizeof(fname), &wfname[0], MAX_PATH);				
+
 			watch.callback(EventData{watch.dir_name, fname, watch.filter, action});
 		}
 	}
 	while (info->NextEntryOffset != 0);
 }
 void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
+	
+	//shutup compiler - annoying unused parameter warning
+	num_bytes;
+	
 	SetEvent(overlapped->hEvent);
 	if (err == ERROR_SUCCESS){
 		WatchData *watch = reinterpret_cast<WatchData*>(overlapped);
