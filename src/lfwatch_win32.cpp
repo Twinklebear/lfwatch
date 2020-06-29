@@ -94,10 +94,7 @@ void emit_events(WatchData &watch){
 	}
 	while (info->NextEntryOffset != 0);
 }
-void CALLBACK watch_callback(DWORD err, DWORD num_bytes, LPOVERLAPPED overlapped){
-	
-	//shutup compiler - annoying unused parameter warning
-	num_bytes;
+void CALLBACK watch_callback(DWORD err, DWORD, LPOVERLAPPED overlapped){	
 	
 	SetEvent(overlapped->hEvent);
 	if (err == ERROR_SUCCESS){
